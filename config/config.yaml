@@ -1,0 +1,24 @@
+capture:
+  backend: "scapy"   # or "pyshark"
+  interface: "eth0"
+  duration_sec: 60
+  bpf_filter: "tcp or udp"
+
+analysis:
+  metrics_interval_sec: 5
+  sliding_window_sec: 60
+
+storage:
+  backend: "influxdb"
+  influx:
+    url: "http://localhost:8086"
+    token: "<REPLACE_WITH_TOKEN>"
+    org: "networkorg"
+    bucket: "network_metrics"
+
+ai:
+  anomaly:
+    model: "isolation_forest"
+    contamination: 0.01
+  forecasting:
+    method: "prophet"   # or "sarimax"
