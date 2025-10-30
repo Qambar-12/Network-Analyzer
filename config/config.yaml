@@ -1,6 +1,6 @@
 capture:
   backend: "scapy"   # or "pyshark"
-  interface: "eth0"
+  interface: "Wi-Fi"
   duration_sec: 60
   bpf_filter: "tcp or udp"
 
