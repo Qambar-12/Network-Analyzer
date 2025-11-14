@@ -4,3 +4,5 @@ influxdb-client
 python-dotenv
 pyyaml
 scapy
+apscheduler
+loguru
