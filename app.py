@@ -142,7 +142,12 @@ with tabs[2]:
     - TCP flag distribution  
     """)
 
-    st.link_button("Open Grafana", "http://localhost:3000")
+    grafana_url = "http://localhost:3000/d/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763200969822&to=1763222569822"
+    st.markdown(f"""
+        <iframe src="{grafana_url}" width="100%" height="800" frameborder="0"></iframe>
+        """, 
+        unsafe_allow_html=True)
+    st.link_button("Open Grafana", grafana_url)
 
 
 # ============================================
