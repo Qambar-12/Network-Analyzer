@@ -1,5 +1,6 @@
 # src/capture/manager.py
 import os
+from dotenv import load_dotenv
 from pathlib import Path
 from loguru import logger
 from typing import Optional, Tuple
@@ -8,7 +9,7 @@ import json
 
 from .utils import timestamped_filename, ensure_dir, write_metadata, file_size_mb
 from .backends.scapy_backend import ScapyBackend
-from .backends.pyshark_backend import PysharkBackend
+
 
 class CaptureManager:
     """
@@ -96,3 +97,18 @@ class CaptureManager:
             meta_file = write_metadata(final_path, meta)
             logger.info("Wrote metadata to {}", meta_file)
             return final_path, pkt_count
+    def _write_to_influx(self, pcap_path: str):
+        """Helper to stream raw packets to InfluxDB after capture."""
+        try:
+            load_dotenv()
+
+            from src.storage.influx_client import InfluxStorage
+            influx = InfluxStorage(
+                url=os.getenv("INFLUX_URL"),
+                token=os.getenv("INFLUX_TOKEN"),
+                org=os.getenv("INFLUX_ORG"),
+                bucket=os.getenv("INFLUX_BUCKET")
+            )
+            influx.stream_raw_packets(pcap_path)
+        except Exception:
+            logger.exception("Failed to stream raw packets to InfluxDB")    

@@ -3,6 +3,7 @@
 # Client for interacting with an InfluxDB time-series database.
 # Handles pushing calculated metrics and results to a time-series database.
 from influxdb_client import InfluxDBClient, Point, WriteOptions
+from scapy.all import rdpcap, IP, TCP, UDP, ICMP
 from loguru import logger
 
 class InfluxStorage:
@@ -52,3 +53,56 @@ class InfluxStorage:
             p.time(timestamp)
         self.write_api.write(bucket=self.bucket, record=p)
         logger.debug("Wrote point to Influx: {} {} {}", measurement, tags, fields)
+    
+    # ---- Stream metrics.json to Influx ---- #
+    def write_metrics(self, metrics: dict):
+        """Push metrics.json summary fields as one InfluxDB measurement."""
+        try:
+            measurement = "capture_metrics"
+            tags = {"file_name": metrics.get("file_name")}
+            fields = {
+                k: v for k, v in metrics.items()
+                if isinstance(v, (int, float)) and not isinstance(v, bool)
+            }
+            self.write_metric(measurement, tags, fields, metrics.get("analyzed_at"))
+            logger.info("✅ Uploaded metrics summary to InfluxDB.")
+        except Exception as e:
+            logger.exception(f"Failed to write metrics to InfluxDB: {e}")
+
+    # ---- Stream raw packet-level data ---- #
+    def stream_raw_packets(self, pcap_path: str, measurement: str = "capture_packets"):
+        """
+        Reads each packet from pcap and writes summary points (timestamp, length, proto, src/dst).
+        Ideal for Grafana live views of traffic pattern.
+        """
+        from datetime import datetime
+        try:
+            pkts = rdpcap(pcap_path)
+            points = []
+            for pkt in pkts:
+                ts = float(getattr(pkt, "time", 0.0))
+                size = len(pkt)
+                proto = "OTHER"
+                src, dst = "unknown", "unknown"
+                if IP in pkt:
+                    ip = pkt[IP]
+                    src, dst = ip.src, ip.dst
+                    if TCP in pkt:
+                        proto = "TCP"
+                    elif UDP in pkt:
+                        proto = "UDP"
+                    elif ICMP in pkt:
+                        proto = "ICMP"
+                    else:
+                        proto = "IP"
+                fields = {"size_bytes": size}
+                tags = {"proto": proto, "src": src, "dst": dst}
+                p = Point(measurement).tag("proto", proto).field("size_bytes", size)
+                p.tag("src", src).tag("dst", dst).time(datetime.utcfromtimestamp(ts))
+                points.append(p)
+
+            if points:
+                self.write_api.write(bucket=self.bucket, record=points)
+                logger.info(f"📡 Streamed {len(points)} packets from {pcap_path} to InfluxDB.")
+        except Exception as e:
+            logger.exception(f"Failed to stream packets from {pcap_path}: {e}")
