@@ -117,28 +117,12 @@ if selected == "Capture":
 # ----------------------------------------------------
 # 2) ANALYSIS TAB
 # ----------------------------------------------------
+# ...existing code...
 elif selected == "Analyze":
 
     st.title("📊 Packet Analysis")
     st.write("Run offline analysis on any captured PCAP file.")
 
-    pcaps = [f for f in os.listdir(CAPTURE_DIR) if f.endswith(".pcap")]
-    pcap_selected = st.selectbox("Choose PCAP File", pcaps)
-
-    if st.button("Run Analysis"):
-        metrics = MetricsExtractor(CAPTURE_DIR, influx_cfg=influx_cfg)
-        analyzer = ProtocolAnalyzer(CAPTURE_DIR)
-
-        pcap_path = os.path.join(CAPTURE_DIR, pcap_selected)
-
-        m = metrics.extract_metrics(pcap_path)
-        metrics._save_metrics(m)
-        metrics._write_to_influx(m)
-
-        proto_res = analyzer.analyze_protocols(pcap_path)
-
-        st.json(m)
-        st.write(proto_res)
     import json
 
     pcaps = sorted([f for f in os.listdir(CAPTURE_DIR) if f.endswith(".pcap")])
@@ -154,11 +138,11 @@ elif selected == "Analyze":
     if not options:
         st.write("No captures or analysis JSON files found.")
     else:
-        selected = st.selectbox("Choose file (PCAP or analysis JSON)", options)
+        selected_file = st.selectbox("Choose file (PCAP or analysis JSON)", options)
 
         # If a JSON metrics file is selected, offer to view it and (if possible) re-run analysis.
-        if selected and selected.endswith(".json"):
-            json_path = os.path.join(CAPTURE_DIR, selected)
+        if selected_file and selected_file.endswith(".json"):
+            json_path = os.path.join(CAPTURE_DIR, selected_file)
             try:
                 with open(json_path, "r", encoding="utf-8") as fh:
                     metrics_json = json.load(fh)
@@ -166,10 +150,10 @@ elif selected == "Analyze":
                 st.json(metrics_json)
             except Exception:
                 logger.exception("Failed to read analysis JSON %s", json_path)
-                st.error(f"Could not open {selected}")
+                st.error(f"Could not open {selected_file}")
 
             # try to find a corresponding pcap to re-run analysis
-            base = selected.replace("_metrics.json", "").replace(".metrics.json", "").replace(".json", "")
+            base = selected_file.replace("_metrics.json", "").replace(".metrics.json", "").replace(".json", "")
             corresponding_pcap = base + ".pcap"
             if os.path.exists(os.path.join(CAPTURE_DIR, corresponding_pcap)):
                 if st.button("Re-run analysis on corresponding PCAP"):
@@ -186,8 +170,8 @@ elif selected == "Analyze":
                 st.info("No corresponding PCAP found to re-run analysis.")
 
         # If a PCAP is selected, run analysis as before
-        elif selected and selected.endswith(".pcap"):
-            pcap_path = os.path.join(CAPTURE_DIR, selected)
+        elif selected_file and selected_file.endswith(".pcap"):
+            pcap_path = os.path.join(CAPTURE_DIR, selected_file)
             if st.button("Run Analysis"):
                 metrics = MetricsExtractor(CAPTURE_DIR, influx_cfg=influx_cfg)
                 analyzer = ProtocolAnalyzer(CAPTURE_DIR)
@@ -197,7 +181,7 @@ elif selected == "Analyze":
                 proto_res = analyzer.analyze_protocols(pcap_path)
                 st.json(m)
                 st.write(proto_res)
-
+                
 
 # ----------------------------------------------------
 # 3) GRAFANA DASHBOARD TAB
