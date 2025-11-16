@@ -263,34 +263,10 @@ elif selected == "Grafana Dashboard":
     render_row("Row 4 — Protocol Analytics", row4, height=330)
     render_row("Row 5 — Capture Metadata", row5, height=380)
 
-# ----------------------------------------------------
+# ============================================
 # 4) AI NETWORK ASSISTANT
-# ----------------------------------------------------
+# ============================================
 elif selected == "AI Assistant":
-
-    st.title("🤖 AI Network Assistant")
-    user_q = st.text_input("Ask something about the network:")
-    st.subheader("Row 1")
-    render_row(row1, height=280)
-
-    st.subheader("Row 2")
-    render_row(row2, height=280)
-
-    st.subheader("Row 3")
-    render_row(row3, height=330)
-
-    st.subheader("Row 4")
-    render_row(row4, height=330)
-
-    st.subheader("Row 5")
-    render_row(row5, height=380)
-    st.link_button("Open Grafana", grafana_url)
-
-
-# ============================================
-# 4) AI AGENT TAB
-# ============================================
-with tabs[3]:
     from src.agent import crew
 
     st.header("🤖 NetSage AI – Intelligent Network Assistant")
