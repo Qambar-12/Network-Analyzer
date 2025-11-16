@@ -143,10 +143,71 @@ with tabs[2]:
     """)
 
     grafana_url = "http://localhost:3000/d/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763200969822&to=1763222569822"
-    st.markdown(f"""
-        <iframe src="{grafana_url}" width="100%" height="800" frameborder="0"></iframe>
-        """, 
-        unsafe_allow_html=True)
+    st.set_page_config(layout="wide")
+    st.title("Grafana Dashboard Embedded in Streamlit")
+
+    # ----------------------------
+    # PANEL URLS
+    # ----------------------------
+    # Replace these with your Grafana panel embed URLs
+    row1 = [
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=2",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=4",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=5",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=6",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=4",
+    ]
+
+    row2 = [
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=8",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=9",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=10",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=11",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=12",
+    ]
+
+    row3 = [
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=14",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=15",
+    ]
+
+    row4 = [
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=14",
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=15",
+    ]
+
+    row5 = [
+        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=17",
+    ]
+
+    # ----------------------------
+    # RENDER FUNCTION
+    # ----------------------------
+
+    def render_row(url_list, height=300):
+        cols = st.columns(len(url_list))
+        for col, url in zip(cols, url_list):
+            with col:
+                st.components.v1.iframe(url, height=height)
+
+    # ----------------------------
+    # SHOW ROWS
+    # ----------------------------
+
+    st.subheader("Row 1")
+    render_row(row1, height=280)
+
+    st.subheader("Row 2")
+    render_row(row2, height=280)
+
+    st.subheader("Row 3")
+    render_row(row3, height=330)
+
+    st.subheader("Row 4")
+    render_row(row4, height=330)
+
+    st.subheader("Row 5")
+    render_row(row5, height=380)
     st.link_button("Open Grafana", grafana_url)
 
 
