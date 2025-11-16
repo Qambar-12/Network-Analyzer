@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import time
+import json
 import threading
 from dotenv import load_dotenv
 
@@ -181,7 +182,7 @@ elif selected == "Analyze":
                 proto_res = analyzer.analyze_protocols(pcap_path)
                 st.json(m)
                 st.write(proto_res)
-                
+
 
 # ----------------------------------------------------
 # 3) GRAFANA DASHBOARD TAB
@@ -252,15 +253,28 @@ elif selected == "Grafana Dashboard":
 # ============================================
 elif selected == "AI Assistant":
     from src.agent import crew
+    import json
 
     st.header("🤖 NetSage AI – Intelligent Network Assistant")
 
-    user_input = st.text_area("Enter your network analysis query:", height=150)
+    user_input = st.text_area(
+        "Enter your network analysis query OR paste metrics.json:",
+        height=150
+    )
+
     if st.button("Ask NetSage AI"):
         if not user_input.strip():
             st.warning("Please enter a query.")
         else:
+            # Auto-detect JSON
+            try:
+                parsed = json.loads(user_input)
+                final_input = parsed
+            except json.JSONDecodeError:
+                final_input = user_input  # treat as plain text query
+
             with st.spinner("NetSage AI is analyzing..."):
-                response = crew.kickoff(json.loads(user_input))
+                response = crew.kickoff(inputs={"input": final_input})
+
             st.subheader("Response:")
             st.markdown(response)
