@@ -1,124 +1,89 @@
-import os
 import json
-import scapy.all as scapy
-from datetime import datetime
+import os
 from dotenv import load_dotenv
-
 load_dotenv()
-
 from influxdb_client import InfluxDBClient
-from langchain.chat_models import ChatOpenAI
-from langchain.agents import initialize_agent, AgentType
-from langchain.tools import tool
+from crewai import Agent, Crew , LLM
+from crewai.tools import tool
+
+@tool
+def json_tool(json_text: str) -> dict:
+    """Parse JSON metrics input and return as dictionary."""
+    return json.loads(json_text)
 
 
+@tool
+def influx_tool(time_range: str) -> dict:
+    """Query InfluxDB for historical metrics over a specified time range."""
+    client = InfluxDBClient(
+        url=os.getenv("INFLUX_URL"),
+        token=os.getenv("INFLUX_TOKEN"),
+        org=os.getenv("INFLUX_ORG"),
+    )
 
-# ================================
-# SYSTEM PROMPT
-# ================================
+    query = f'''
+    from(bucket:"{os.getenv("INFLUX_BUCKET")}")
+        |> range(start: -{time_range})
+        |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)
+        |> yield(name: "mean")
+    '''
+
+    q = client.query_api()
+    result = q.query(query)
+
+    output = []
+    for table in result:
+        for record in table.records:
+            output.append({
+                "time": record.get_time().isoformat(),
+                "measurement": record.get_measurement(),
+                "field": record.get_field(),
+                "value": record.get_value()
+            })
+
+    return output
+
+
 SYSTEM_PROMPT = """
-You are **NetSage AI**, an autonomous network analysis agent.
+You are **NetSage AI**, a specialized autonomous network-intelligence agent.
 
-Your responsibilities:
-- Analyze PCAP traffic and provide protocol-level insights.
-- Interpret and summarize JSON metrics produced by the analytics engine.
-- Query the InfluxDB time-series database for time-windowed network telemetry.
-- Detect anomalies, threats, and suspicious patterns.
-- Provide optimization suggestions for performance and stability.
-- If the user uploads PCAP/JSON or asks questions about the network state, you MUST use the appropriate TOOL instead of guessing.
+Your capabilities:
+- Deep analysis of PCAP traffic and extracted metadata.
+- Interpretation of metrics.json files produced from PCAP analysis.
+- Comparison of provided metrics against historical telemetry by querying InfluxDB.
+- Detection of anomalies, threats, protocol misuse, spikes, performance degradation, and latency irregularities.
+- Recommendation of corrective actions for performance optimization and security hardening.
+
+INPUT EXPECTATIONS:
+- Whenever the user requests metrics analysis, you MUST expect the input to be valid JSON.
+- If JSON metrics are needed and the user has not provided them, you MUST explicitly ask the user to provide the JSON metrics before proceeding.
 
 TOOL USAGE RULES:
-1. If the question requires real data (pcap, json, influx), always call a TOOL.
-2. NEVER fabricate or hallucinate metrics, timestamps, IPs, protocols, or statistics.
-3. After receiving tool output, analyze it step-by-step and give clear insights.
-4. Ask for more data if needed.
+1. For any metrics.json or metrics-like input → ALWAYS use the json_tool to parse it (never parse JSON manually).
+2. For any comparison with historical or time-windowed data → ALWAYS use the influx_tool.
+3. NEVER invent, infer, or assume metrics that were not provided or retrieved from InfluxDB.
+4. ALWAYS base conclusions strictly on parsed metrics and InfluxDB telemetry.
 
-TOOLS YOU MAY CALL:
-- parse_json_metrics(json_text)
-- influx_query(time_range)
+ANALYSIS BEHAVIOR:
+- Perform structured, step-by-step reasoning.
+- Compare current metrics against historical telemetry from InfluxDB to identify trends, deviations, regressions, or anomalies.
+- Detect potential threats, irregular traffic patterns, protocol misuse, spikes, or security risks.
+- Provide a clear, concise summary followed by well-justified recommended next steps.
+- Think critically about network context, implications, root causes, and potential impact.
 
-Be proactive, factual, and detailed in your explanations.
+If required metrics are missing → stop and request the JSON before proceeding.
 """
+llm = LLM(model=os.getenv("MODEL"),
+    base_url=os.getenv("AI_ML_BASE_URL"),
+    api_key=os.getenv("AI_ML_API_KEY"))
 
+net_agent = Agent(
+    role=SYSTEM_PROMPT,
+    goal="Provide comprehensive network insights using PCAP, metrics.json, and InfluxDB.",
+    backstory="An expert AI for deep packet inspection and telemetry intelligence.",
+    tools=[json_tool, influx_tool],
+    verbose=True,
+    llm=llm
+)
 
-# ================================
-# TOOL DEFINITIONS
-# ================================
-
-class NetTools:
-
-
-    # ---- Tool 1: JSON metrics parser -----------------------------------
-    @tool("parse_json_metrics")
-    def parse_json_metrics(json_text: str) -> dict:
-        """Parse and return a metrics.json file content."""
-        return json.loads(json_text)
-
-    # ---- Tool 2: InfluxDB time-series query -----------------------------
-    @tool("influx_query")
-    def influx_query(time_range: str) -> dict:
-        """
-        Query InfluxDB for recorded metrics over a given time window.
-        Example time_range: "10m", "1h", "24h"
-        """
-
-        client = InfluxDBClient(
-            url=os.getenv("INFLUX_URL"),
-            token=os.getenv("INFLUX_TOKEN"),
-            org=os.getenv("INFLUX_ORG"),
-        )
-        q = client.query_api()
-
-        flux = f'''
-        from(bucket: "{os.getenv("INFLUX_BUCKET")}")
-            |> range(start: -{time_range})
-            |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)
-            |> yield(name: "mean")
-        '''
-        try:
-            result = q.query(flux)
-            final = []
-
-            for table in result:
-                for record in table.records:
-                    final.append({
-                        "time": record.get_time().isoformat(),
-                        "measurement": record.get_measurement(),
-                        "field": record.get_field(),
-                        "value": record.get_value(),
-                    })
-
-            return {"status": "ok", "records": final}
-
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
-
-
-
-# ================================
-# AGENT INITIALIZER
-# ================================
-
-def create_agent():
-    llm = ChatOpenAI(
-        model_name=os.getenv("MODEL"),
-        client_kwargs={"api_key": os.getenv("AI_ML_API_KEY"),"base_url": os.getenv("AI_ML_BASE_URL")},
-        temperature=0.2
-    )
-
-    tools = [
-        NetTools.extract_metrics_from_pcap,
-        NetTools.parse_json_metrics,
-        NetTools.influx_query
-    ]
-
-    agent = initialize_agent(
-        tools,
-        llm,
-        agent=AgentType.OPENAI_FUNCTIONS,  # enables automatic tool selection
-        verbose=True,
-        handle_parsing_errors=True
-    )
-
-    agent.system_message = SYSTEM_PROMPT
-    return agent
+crew = Crew(agents=[net_agent])

@@ -257,44 +257,16 @@ with tabs[2]:
 # 4) AI AGENT TAB
 # ============================================
 with tabs[3]:
-    from src.agent import create_agent
-    agent = create_agent()
+    from src.agent import crew
 
     st.header("🤖 NetSage AI – Intelligent Network Assistant")
 
-    st.write("""
-    This assistant can:
-    - Analyze PCAP files using tool calls  
-    - Parse JSON metrics  
-    - Query InfluxDB for time-series data  
-    - Detect anomalies, patterns, and security issues  
-    """)
-
-    # USER INPUT AREA
-    user_question = st.text_input("Ask something about your network:")
-
-    uploaded_json = st.file_uploader("Upload metrics.json (optional)", type=["json"])
-    uploaded_pcap = st.file_uploader("Upload PCAP file (optional)", type=["pcap"])
-
-    # Prepare context injection
-    context_text = ""
-
-    if uploaded_json:
-        json_text = uploaded_json.read().decode()
-        context_text += f"\nUser uploaded metrics JSON:\n{json_text}\n"
-
-    if uploaded_pcap:
-        # Save temporarily
-        temp_pcap_path = "temp_upload.pcap"
-        with open(temp_pcap_path, "wb") as f:
-            f.write(uploaded_pcap.read())
-
-        context_text += f"\nPCAP available at path: {temp_pcap_path}\n"
-
-    if st.button("Ask AI"):
-        with st.spinner("Analyzing with NetSage AI..."):
-            full_query = user_question + "\n\n" + context_text
-            response = agent.run(full_query)
-
-        st.success("AI Response:")
-        st.write(response)
+    user_input = st.text_area("Enter your network analysis query:", height=150)
+    if st.button("Ask NetSage AI"):
+        if not user_input.strip():
+            st.warning("Please enter a query.")
+        else:
+            with st.spinner("NetSage AI is analyzing..."):
+                response = crew.kickoff(json.loads(user_input))
+            st.subheader("Response:")
+            st.markdown(response)
