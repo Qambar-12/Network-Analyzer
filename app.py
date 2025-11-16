@@ -105,22 +105,64 @@ with tabs[0]:
 with tabs[1]:
     st.header("Run Analysis on Capture File")
 
-    pcaps = [f for f in os.listdir(CAPTURE_DIR) if f.endswith(".pcap")]
-    pcap_selected = st.selectbox("Choose PCAP", pcaps)
+    import json
 
-    if st.button("Run Analysis"):
-        metrics = MetricsExtractor(CAPTURE_DIR, influx_cfg=influx_cfg)
-        analyzer = ProtocolAnalyzer(CAPTURE_DIR)
+    pcaps = sorted([f for f in os.listdir(CAPTURE_DIR) if f.endswith(".pcap")])
+    analyzed_jsons = sorted([f for f in os.listdir(CAPTURE_DIR) if f.endswith(".json")])
 
-        pcap_path = os.path.join(CAPTURE_DIR, pcap_selected)
-        m = metrics.extract_metrics(pcap_path)
-        metrics._save_metrics(m)
-        metrics._write_to_influx(m)
+    options = []
+    for p in pcaps:
+        options.append(p)
+    for j in analyzed_jsons:
+        # show metric JSON files alongside pcaps
+        options.append(j)
 
-        proto_res = analyzer.analyze_protocols(pcap_path)
+    if not options:
+        st.write("No captures or analysis JSON files found.")
+    else:
+        selected = st.selectbox("Choose file (PCAP or analysis JSON)", options)
 
-        st.json(m)
-        st.write(proto_res)
+        # If a JSON metrics file is selected, offer to view it and (if possible) re-run analysis.
+        if selected and selected.endswith(".json"):
+            json_path = os.path.join(CAPTURE_DIR, selected)
+            try:
+                with open(json_path, "r", encoding="utf-8") as fh:
+                    metrics_json = json.load(fh)
+                st.subheader("Saved analysis JSON")
+                st.json(metrics_json)
+            except Exception:
+                logger.exception("Failed to read analysis JSON %s", json_path)
+                st.error(f"Could not open {selected}")
+
+            # try to find a corresponding pcap to re-run analysis
+            base = selected.replace("_metrics.json", "").replace(".metrics.json", "").replace(".json", "")
+            corresponding_pcap = base + ".pcap"
+            if os.path.exists(os.path.join(CAPTURE_DIR, corresponding_pcap)):
+                if st.button("Re-run analysis on corresponding PCAP"):
+                    metrics = MetricsExtractor(CAPTURE_DIR, influx_cfg=influx_cfg)
+                    analyzer = ProtocolAnalyzer(CAPTURE_DIR)
+                    pcap_path = os.path.join(CAPTURE_DIR, corresponding_pcap)
+                    m = metrics.extract_metrics(pcap_path)
+                    metrics._save_metrics(m)
+                    metrics._write_to_influx(m)
+                    proto_res = analyzer.analyze_protocols(pcap_path)
+                    st.json(m)
+                    st.write(proto_res)
+            else:
+                st.info("No corresponding PCAP found to re-run analysis.")
+
+        # If a PCAP is selected, run analysis as before
+        elif selected and selected.endswith(".pcap"):
+            pcap_path = os.path.join(CAPTURE_DIR, selected)
+            if st.button("Run Analysis"):
+                metrics = MetricsExtractor(CAPTURE_DIR, influx_cfg=influx_cfg)
+                analyzer = ProtocolAnalyzer(CAPTURE_DIR)
+                m = metrics.extract_metrics(pcap_path)
+                metrics._save_metrics(m)
+                metrics._write_to_influx(m)
+                proto_res = analyzer.analyze_protocols(pcap_path)
+                st.json(m)
+                st.write(proto_res)
 
 
 # ============================================
@@ -154,13 +196,44 @@ with tabs[2]:
 # 4) AI AGENT TAB
 # ============================================
 with tabs[3]:
-    st.header("AI Network Assistant")
+    from src.agent import create_agent
+    agent = create_agent()
 
-    st.write("Ask anything about network state, threats, anomalies, recommendations.")
+    st.header("🤖 NetSage AI – Intelligent Network Assistant")
 
-    user_q = st.text_input("Your question:")
+    st.write("""
+    This assistant can:
+    - Analyze PCAP files using tool calls  
+    - Parse JSON metrics  
+    - Query InfluxDB for time-series data  
+    - Detect anomalies, patterns, and security issues  
+    """)
+
+    # USER INPUT AREA
+    user_question = st.text_input("Ask something about your network:")
+
+    uploaded_json = st.file_uploader("Upload metrics.json (optional)", type=["json"])
+    uploaded_pcap = st.file_uploader("Upload PCAP file (optional)", type=["pcap"])
+
+    # Prepare context injection
+    context_text = ""
+
+    if uploaded_json:
+        json_text = uploaded_json.read().decode()
+        context_text += f"\nUser uploaded metrics JSON:\n{json_text}\n"
+
+    if uploaded_pcap:
+        # Save temporarily
+        temp_pcap_path = "temp_upload.pcap"
+        with open(temp_pcap_path, "wb") as f:
+            f.write(uploaded_pcap.read())
+
+        context_text += f"\nPCAP available at path: {temp_pcap_path}\n"
 
     if st.button("Ask AI"):
-        # Placeholder – integrate your LLM here (OpenAI / Groq / Watsonx)
-        st.write("🤖 AI Response (placeholder):")
-        st.success("Based on recent metrics, the network latency is stable and no anomaly found.")
+        with st.spinner("Analyzing with NetSage AI..."):
+            full_query = user_question + "\n\n" + context_text
+            response = agent.run(full_query)
+
+        st.success("AI Response:")
+        st.write(response)
