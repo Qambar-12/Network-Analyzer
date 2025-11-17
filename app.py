@@ -75,45 +75,53 @@ st.sidebar.caption("Developed by QABH – Streamlit UI + Grafana Visualization")
 # ----------------------------------------------------
 if selected == "Capture":
 
+    from streamlit_autorefresh import st_autorefresh
+
     st.title("📥 Packet Capture")
     st.write("Capture live network packets from Scapy/PyShark backend.")
 
+    # --- Capture options ---
     iface = st.selectbox("Capture Interface", ["Wi-Fi", "Ethernet", "eth0"])
     backend = st.radio("Backend", ["scapy", "pyshark"], horizontal=True)
     bpf = st.text_input("BPF Filter", "tcp or udp")
     duration = st.number_input("Duration (seconds)", value=10, min_value=1)
 
+    # --- Buttons ---
     col1, col2 = st.columns([1, 1])
 
+    # Check if capture thread exists and is alive
+    is_capturing = (
+        st.session_state.capture_thread is not None 
+        and st.session_state.capture_thread.is_alive()
+    )
+
     with col1:
-        if st.button("▶ Start Capture", disabled=st.session_state.capturing):
+        if st.button("▶ Start Capture", disabled=is_capturing):
             st.session_state.capture_thread = threading.Thread(
                 target=run_capture,
                 args=(iface, backend, bpf, duration),
                 daemon=True
             )
             st.session_state.capture_thread.start()
+            is_capturing = True  # immediately reflect in UI
 
     with col2:
-        if st.button("⏹ Force Stop"):
-            st.session_state.capturing = False
+        if st.button("⏹ Force Stop", disabled=not is_capturing):
+            st.warning("Force Stop not implemented. Stop the backend manually.")
 
-    if st.session_state.capturing:
+    # --- Status & auto-refresh ---
+    if is_capturing:
         st.info("🔴 Capture in progress...")
+        # Auto-refresh the page every second to update status & file list
+        st_autorefresh(interval=1000, key="capture_refresh")
     else:
         st.success("🟢 Idle")
 
     st.divider()
     st.subheader("📄 Saved PCAP Files")
 
-    # Auto-update only while capturing
-    if st.session_state.capturing:
-        time.sleep(1)
-        st.experimental_rerun()
-        
-    pcaps = [f for f in os.listdir(CAPTURE_DIR) if f.endswith(".pcap")]
+    pcaps = sorted([f for f in os.listdir(CAPTURE_DIR) if f.endswith(".pcap")])
     st.write(pcaps if pcaps else "No captures available.")
-
 
 # ----------------------------------------------------
 # 2) ANALYSIS TAB
