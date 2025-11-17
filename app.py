@@ -190,40 +190,34 @@ elif selected == "Analyze":
 elif selected == "Grafana Dashboard":
 
     st.set_page_config(layout="wide")
-    st.title("Grafana Dashboard Embedded in Streamlit")
+    st.title("Visualization Dashboard")
 
     # ----------------------------
     # PANEL URLS (Your URLs)
     # ----------------------------
 
     row1 = [
-        "http://localhost:3000/d-solo/af4dbqf4038xsb/ccn?orgId=1&from=1763338742191&to=1763360342191&panelId=1",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=4",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=5",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=6",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=4",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763367502969&to=1763389102969&panelId=2",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763367535996&to=1763389135996&panelId=3",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763367605190&to=1763389205190&panelId=4",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763367629263&to=1763389229263&panelId=5",
     ]
 
     row2 = [
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=8",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=9",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=10",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=11",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=12",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763368304367&to=1763389904367&panelId=7",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763368340403&to=1763389940403&panelId=8",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763368360908&to=1763389960908&panelId=9",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763368405475&to=1763390005475&panelId=10",
     ]
 
     row3 = [
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=14",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=15",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763368936159&to=1763390536160&panelId=12",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763368969343&to=1763390569343&panelId=13",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763369001203&to=1763390601203&panelId=14"
     ]
 
     row4 = [
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=14",
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=15",
-    ]
-
-    row5 = [
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=17",
+        "http://localhost:3000/d-solo/ff47mv9c8jmdca/network-analyzer?orgId=1&from=1763372029696&to=1763393629696&panelId=16",
     ]
 
 
@@ -246,7 +240,7 @@ elif selected == "Grafana Dashboard":
     render_row("Row 2 — Packet Metrics", row2, height=280)
     render_row("Row 3 — Time-Series Metrics", row3, height=330)
     render_row("Row 4 — Protocol Analytics", row4, height=330)
-    render_row("Row 5 — Capture Metadata", row5, height=380)
+
 
 # ============================================
 # 4) AI NETWORK ASSISTANT
