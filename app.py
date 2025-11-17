@@ -197,7 +197,7 @@ elif selected == "Grafana Dashboard":
     # ----------------------------
 
     row1 = [
-        "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=2",
+        "http://localhost:3000/d-solo/af4dbqf4038xsb/ccn?orgId=1&from=1763338742191&to=1763360342191&panelId=1",
         "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=4",
         "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=5",
         "http://localhost:3000/d-solo/cf47q469kkxs0f/test?orgId=1&from=1763212325964&to=1763226494281&panelId=6",
@@ -254,27 +254,51 @@ elif selected == "Grafana Dashboard":
 elif selected == "AI Assistant":
     from src.agent import crew
     import json
+    import re
+    import streamlit as st
 
     st.header("🤖 NetSage AI – Intelligent Network Assistant")
 
+    st.markdown(
+        """
+        **Usage:**  
+        - Paste a `metrics.json` file  
+        - OR write a natural-language query like:  
+          *"Analyze TCP retransmissions and compare with past 24 hours."*  
+        """
+    )
+
     user_input = st.text_area(
         "Enter your network analysis query OR paste metrics.json:",
-        height=150
+        height=160
     )
 
     if st.button("Ask NetSage AI"):
         if not user_input.strip():
             st.warning("Please enter a query.")
         else:
-            # Auto-detect JSON
+            # ------------------------------------
+            # AUTO-DETECT JSON METRICS
+            # ------------------------------------
             try:
-                parsed = json.loads(user_input)
-                final_input = parsed
+                parsed_json = json.loads(user_input)
+                final_input = parsed_json          # Send structured metrics to Crew
             except json.JSONDecodeError:
-                final_input = user_input  # treat as plain text query
+                final_input = user_input.strip()   # Regular text query
 
-            with st.spinner("NetSage AI is analyzing..."):
-                response = crew.kickoff(inputs={"input": final_input})
 
-            st.subheader("Response:")
+            # ------------------------------------
+            # RUN THE AGENT
+            # ------------------------------------
+            with st.spinner("NetSage AI is analyzing your data..."):
+                try:
+                    response = crew.kickoff(inputs={"input": final_input})
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+                    st.stop()
+
+            # ------------------------------------
+            # DISPLAY RESPONSE
+            # ------------------------------------
+            st.subheader("📡 NetSage AI Response")
             st.markdown(response)
